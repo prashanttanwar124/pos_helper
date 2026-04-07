@@ -19,10 +19,18 @@ fs.mkdirSync(runtimeDir, { recursive: true });
 fs.mkdirSync(helperDir, { recursive: true });
 
 const nodeSourcePath = preferredNodePath();
+
+if (!nodeSourcePath) {
+  throw new Error('No usable Node runtime found for desktop packaging.');
+}
+
 fs.copyFileSync(nodeSourcePath, nodeTargetPath);
 
 for (const file of ['index.js', 'package.json', 'package-lock.json']) {
-  fs.copyFileSync(path.join(rootDir, file), path.join(helperDir, file));
+  const sourcePath = path.join(rootDir, file);
+  if (fs.existsSync(sourcePath)) {
+    fs.copyFileSync(sourcePath, path.join(helperDir, file));
+  }
 }
 
 fs.cpSync(path.join(rootDir, 'node_modules'), path.join(helperDir, 'node_modules'), {

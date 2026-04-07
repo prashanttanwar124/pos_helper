@@ -89,6 +89,25 @@ Package builds:
 npm run desktop:build
 ```
 
+Window close behavior:
+
+- closing the desktop control window quits the app completely
+
+## GitHub Actions Windows Build
+
+This repo now includes a GitHub Actions workflow that builds a Windows `x64` installer on GitHub's Windows runner.
+
+How to use it:
+
+1. Push your latest changes to GitHub
+2. Open the repository on GitHub
+3. Go to the `Actions` tab
+4. Open `Build Windows Installer`
+5. Click `Run workflow`
+6. After it finishes, open the workflow run and download the `nfc-helper-control-windows-x64` artifact
+
+That artifact includes the generated Windows installer `.exe`.
+
 What the packaged app includes:
 
 - a bundled Node runtime for the helper
