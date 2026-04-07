@@ -1,4 +1,5 @@
 const fs = require('fs');
+const net = require('net');
 const path = require('path');
 const { spawn } = require('child_process');
 const electron = require('electron');
@@ -275,10 +276,46 @@ function createTray() {
   updateTrayMenu();
 }
 
+function checkPortAvailability(host, port) {
+  return new Promise((resolve) => {
+    const tester = net
+      .createServer()
+      .once('error', (error) => {
+        if (error.code === 'EADDRINUSE') {
+          resolve({ available: false, reason: 'in_use' });
+          return;
+        }
+
+        resolve({ available: false, reason: error.code || error.message });
+      })
+      .once('listening', () => {
+        tester.close(() => resolve({ available: true }));
+      });
+
+    tester.listen(port, host);
+  });
+}
+
 async function startHelper() {
   const currentStatus = await getHelperStatus();
   if (currentStatus.running) {
     return currentStatus;
+  }
+
+  const portCheck = await checkPortAvailability(HOST, PORT);
+  if (!portCheck.available) {
+    if (portCheck.reason === 'in_use') {
+      helperStartupError = `Port ${PORT} is already in use. Close the other process using ${HOST}:${PORT} and try again.`;
+    } else {
+      helperStartupError = `Unable to check port ${PORT}: ${portCheck.reason}`;
+    }
+
+    fs.mkdirSync(getLogDir(), { recursive: true });
+    fs.appendFileSync(
+      getLogPath(),
+      `[${new Date().toISOString()}] desktop-error: ${helperStartupError}\n`
+    );
+    return getHelperStatus();
   }
 
   fs.mkdirSync(getLogDir(), { recursive: true });
