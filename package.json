@@ -24,7 +24,6 @@
   "build": {
     "appId": "com.maniratn.nfchelper.desktop",
     "productName": "NFC Helper Control",
-    "icon": "build/icon.ico",
     "files": [
       "desktop/**/*",
       "package.json",
@@ -48,7 +47,6 @@
       ]
     },
     "win": {
-      "icon": "build/icon.ico",
       "target": [
         "nsis"
       ]
