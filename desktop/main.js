@@ -1,7 +1,7 @@
 const fs = require('fs');
 const net = require('net');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const electron = require('electron');
 const { BrowserWindow, ipcMain, Menu, Tray, nativeImage, shell } = electron;
 const app = electron.app || require('electron/main').app;
@@ -296,6 +296,79 @@ function checkPortAvailability(host, port) {
   });
 }
 
+function runCommand(command, args) {
+  return spawnSync(command, args, {
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+  });
+}
+
+function getPidsUsingPort(port) {
+  if (process.platform === 'win32') {
+    const result = runCommand('netstat', ['-ano', '-p', 'tcp']);
+    if (result.error || result.status !== 0) {
+      return [];
+    }
+
+    return String(result.stdout || '')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.includes(`:${port}`) && line.includes('LISTENING'))
+      .map((line) => line.split(/\s+/).pop())
+      .filter((pid) => pid && /^\d+$/.test(pid) && pid !== String(process.pid));
+  }
+
+  const result = runCommand('lsof', ['-ti', `tcp:${port}`]);
+  if (result.error || result.status !== 0) {
+    return [];
+  }
+
+  return String(result.stdout || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((pid) => pid && /^\d+$/.test(pid) && pid !== String(process.pid));
+}
+
+function terminatePid(pid) {
+  if (process.platform === 'win32') {
+    return runCommand('taskkill', ['/PID', String(pid), '/F']);
+  }
+
+  return runCommand('kill', ['-TERM', String(pid)]);
+}
+
+async function freePort(port) {
+  const pids = [...new Set(getPidsUsingPort(port))];
+  if (pids.length === 0) {
+    return { freed: false, reason: 'no_pid_found' };
+  }
+
+  let terminatedAny = false;
+
+  for (const pid of pids) {
+    const result = terminatePid(pid);
+    if (!result.error && result.status === 0) {
+      terminatedAny = true;
+      fs.appendFileSync(
+        getLogPath(),
+        `[${new Date().toISOString()}] desktop: Terminated process ${pid} using port ${port}\n`
+      );
+    }
+  }
+
+  if (!terminatedAny) {
+    return { freed: false, reason: 'terminate_failed', pids };
+  }
+
+  await wait(1200);
+  const recheck = await checkPortAvailability(HOST, port);
+  return {
+    freed: recheck.available,
+    reason: recheck.available ? 'freed' : 'still_in_use',
+    pids,
+  };
+}
+
 async function startHelper() {
   const currentStatus = await getHelperStatus();
   if (currentStatus.running) {
@@ -304,18 +377,27 @@ async function startHelper() {
 
   const portCheck = await checkPortAvailability(HOST, PORT);
   if (!portCheck.available) {
+    fs.mkdirSync(getLogDir(), { recursive: true });
+
     if (portCheck.reason === 'in_use') {
-      helperStartupError = `Port ${PORT} is already in use. Close the other process using ${HOST}:${PORT} and try again.`;
+      const freed = await freePort(PORT);
+      if (!freed.freed) {
+        helperStartupError = `Port ${PORT} is already in use and could not be freed automatically.`;
+        if (freed.pids && freed.pids.length) {
+          helperStartupError += ` PID: ${freed.pids.join(', ')}.`;
+        }
+      }
     } else {
       helperStartupError = `Unable to check port ${PORT}: ${portCheck.reason}`;
     }
 
-    fs.mkdirSync(getLogDir(), { recursive: true });
-    fs.appendFileSync(
-      getLogPath(),
-      `[${new Date().toISOString()}] desktop-error: ${helperStartupError}\n`
-    );
-    return getHelperStatus();
+    if (helperStartupError) {
+      fs.appendFileSync(
+        getLogPath(),
+        `[${new Date().toISOString()}] desktop-error: ${helperStartupError}\n`
+      );
+      return getHelperStatus();
+    }
   }
 
   fs.mkdirSync(getLogDir(), { recursive: true });
