@@ -423,6 +423,9 @@ ipcMain.handle('helper:open-logs', async () => {
 app.whenReady().then(() => {
   createTray();
   createWindow();
+  startHelper().then(() => {
+    updateTrayMenu();
+  });
 
   app.on('activate', () => {
     if (!mainWindow) {
