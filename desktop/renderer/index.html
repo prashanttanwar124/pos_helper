@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NFC Helper Control</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div class="brand-row">
+          <div class="brand-mark" aria-hidden="true">
+            <span class="brand-chip brand-chip-a"></span>
+            <span class="brand-chip brand-chip-b"></span>
+            <span class="brand-chip brand-chip-c"></span>
+          </div>
+          <div class="brand-copy">
+            <p class="eyebrow">Prime-Style Desktop Control</p>
+            <h1>NFC Helper</h1>
+            <p class="subtitle">Start or stop the local NFC service, monitor reader health, and keep the helper available from the menu bar or system tray.</p>
+          </div>
+        </div>
+        <div class="hero-callout">
+          <div class="hero-callout-item">
+            <span class="hero-callout-label">Connection</span>
+            <strong>Localhost `127.0.0.1:8090`</strong>
+          </div>
+          <div class="hero-callout-item">
+            <span class="hero-callout-label">Behavior</span>
+            <strong>Closing this window quits the app completely</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel status-panel">
+        <div class="status-grid">
+          <article class="status-card">
+            <p class="label">Helper</p>
+            <p id="helperStatus" class="value">Unknown</p>
+          </article>
+          <article class="status-card">
+            <p class="label">Reader</p>
+            <p id="readerStatus" class="value">Unknown</p>
+          </article>
+          <article class="status-card">
+            <p class="label">Last UID</p>
+            <p id="lastUid" class="value mono">-</p>
+          </article>
+          <article class="status-card">
+            <p class="label">Pending</p>
+            <p id="pendingStatus" class="value">None</p>
+          </article>
+        </div>
+
+        <div class="actions">
+          <button id="startButton" class="primary">Start Helper</button>
+          <button id="stopButton" class="secondary">Stop Helper</button>
+          <button id="refreshButton" class="secondary">Refresh Status</button>
+          <button id="logsButton" class="secondary">Open Logs</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <h2>Recent Activity</h2>
+          <p id="lastError" class="hint">No recent errors.</p>
+        </div>
+        <div id="recentActions" class="activity-list"></div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
