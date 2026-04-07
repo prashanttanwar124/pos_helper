@@ -23,11 +23,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Remove undersized Windows icon
+      - name: Remove custom icons for Windows CI
         shell: pwsh
         run: |
           if (Test-Path "build/icon.ico") {
             Remove-Item "build/icon.ico" -Force
+          }
+          if (Test-Path "build/icon.icns") {
+            Remove-Item "build/icon.icns" -Force
+          }
+          if (Test-Path "build/.DS_Store") {
+            Remove-Item "build/.DS_Store" -Force
           }
 
       - name: Build Windows x64 installer
