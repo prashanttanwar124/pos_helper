@@ -1,16 +1,32 @@
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { preferredNodePath, preferredNpmPath } = require('./node-runtime');
+const { preferredNodePath, preferredNpmPath, preferredPythonPath } = require('./node-runtime');
 
 const rootDir = path.resolve(__dirname, '..');
 const nodePath = preferredNodePath();
 const npmPath = preferredNpmPath(nodePath);
 const nodeDir = path.dirname(path.dirname(nodePath));
+const pcscliteBinaryPath = path.join(
+  rootDir,
+  'node_modules',
+  '@pokusew',
+  'pcsclite',
+  'build',
+  'Release',
+  'pcsclite.node'
+);
+const shouldForceRebuild = process.argv.includes('--force');
+const shouldReuseExisting = process.argv.includes('--if-needed');
 
 if (!nodePath) {
   console.error('No usable Node runtime found for rebuilding native modules.');
   process.exit(1);
+}
+
+if (!shouldForceRebuild && shouldReuseExisting && fs.existsSync(pcscliteBinaryPath)) {
+  console.log(`Using existing native helper module at ${pcscliteBinaryPath}`);
+  process.exit(0);
 }
 
 const env = {
@@ -24,6 +40,12 @@ if (process.platform !== 'win32') {
   if (fs.existsSync(includeDir)) {
     env.npm_config_nodedir = nodeDir;
   }
+}
+
+const pythonPath = preferredPythonPath();
+if (pythonPath) {
+  env.PYTHON = pythonPath;
+  env.npm_config_python = pythonPath;
 }
 
 const result = spawnSync(

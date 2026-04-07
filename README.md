@@ -83,6 +83,12 @@ npm install
 npm run desktop:dev
 ```
 
+Windows ARM64 note:
+
+- if you keep a separate local x64 Node runtime under `.tooling/node`, `.tooling/node-x64`, or `.tooling/node-win-x64`, the desktop scripts will prefer it for native helper rebuilds and runtime prep
+- `desktop:dev` reuses an existing built `pcsclite.node` when available instead of forcing a rebuild every launch
+- the dev launcher clears `ELECTRON_RUN_AS_NODE` before starting Electron, which avoids a common Windows startup failure
+
 Package builds:
 
 ```bash

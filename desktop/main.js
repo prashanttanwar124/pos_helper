@@ -9,12 +9,27 @@ const HOST = '127.0.0.1';
 const PORT = 8090;
 const HELPER_URL = `http://${HOST}:${PORT}/health`;
 const DEV_RUNTIME_DIR = path.join(__dirname, '..', '.desktop-runtime');
+const DEV_APP_DATA_DIR = path.join(DEV_RUNTIME_DIR, 'electron-data');
 
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
 let helperProcess = null;
 let helperStartupError = null;
+
+if (!app.isPackaged) {
+  const userDataDir = path.join(DEV_APP_DATA_DIR, 'userData');
+  const sessionDataDir = path.join(DEV_APP_DATA_DIR, 'sessionData');
+  const logsDir = path.join(DEV_APP_DATA_DIR, 'logs');
+
+  fs.mkdirSync(userDataDir, { recursive: true });
+  fs.mkdirSync(sessionDataDir, { recursive: true });
+  fs.mkdirSync(logsDir, { recursive: true });
+
+  app.setPath('userData', userDataDir);
+  app.setPath('sessionData', sessionDataDir);
+  app.setAppLogsPath(logsDir);
+}
 
 function getSupportDir() {
   return path.join(app.getPath('userData'), 'helper-runtime');

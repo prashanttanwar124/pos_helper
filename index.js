@@ -909,6 +909,21 @@ let server = null;
 let nfc = null;
 let helperStarted = false;
 
+function initializeNfc() {
+  if (nfc) {
+    return;
+  }
+
+  try {
+    nfc = new NFC();
+    nfc.on('reader', handleReader);
+    nfc.on('error', handleNfcError);
+  } catch (error) {
+    nfc = null;
+    setLastError(new Error(`NFC initialization failed: ${error.message}`));
+  }
+}
+
 function handleReader(reader) {
   state.readerConnected = true;
   state.readerName = reader.reader.name;
@@ -970,11 +985,17 @@ function startHelper() {
   server = app.listen(HTTP_PORT, HOST, () => {
     logAction('startup', `NFC helper listening on http://${HOST}:${HTTP_PORT}`);
   });
+  server.on('error', (error) => {
+    helperStarted = false;
+    server = null;
+    setLastError(new Error(`HTTP server failed to start: ${error.message}`));
+    if (require.main === module) {
+      process.exit(1);
+    }
+  });
 
-  nfc = new NFC();
-  nfc.on('reader', handleReader);
-  nfc.on('error', handleNfcError);
   helperStarted = true;
+  initializeNfc();
   return getHelperStatus();
 }
 
