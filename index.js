@@ -714,6 +714,26 @@ function sendError(res, error) {
   });
 }
 
+async function readTagPayloadForOverwrite(reader, card) {
+  try {
+    return await readTagPayload(reader, card);
+  } catch (error) {
+    if (
+      error &&
+      error.status === 400 &&
+      typeof error.message === 'string' &&
+      error.message.includes('incomplete NDEF record')
+    ) {
+      logAction('warning', 'Malformed NDEF detected. Continuing with overwrite.', {
+        message: error.message,
+      });
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 app.get('/health', (_req, res) => {
   res.json({
     success: true,
@@ -770,7 +790,7 @@ app.post('/nfc/write-url', async (req, res) => {
         throw createHttpError(400, 'Tag is already locked.');
       }
 
-      const existing = await readTagPayload(reader, card);
+      const existing = await readTagPayloadForOverwrite(reader, card);
       if (existing && existing.kind === 'url' && existing.value === url) {
         trackTokenWrite(token, uid, url);
         logAction('write', 'Skipped write because the same URL is already present.', {
