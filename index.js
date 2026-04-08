@@ -132,6 +132,7 @@ function getPendingOperationInfo() {
 }
 
 function requireReader() {
+  initializeNfc();
   if (!state.readerConnected || !state.readerName) {
     throw createHttpError(503, 'No reader found. Connect the ACR122U reader and try again.');
   }
@@ -908,20 +909,26 @@ app.use((error, _req, res, _next) => {
 let server = null;
 let nfc = null;
 let helperStarted = false;
+let nfcInitializationStarted = false;
 
 function initializeNfc() {
-  if (nfc) {
+  if (nfcInitializationStarted || nfc) {
     return;
   }
 
-  try {
-    nfc = new NFC();
-    nfc.on('reader', handleReader);
-    nfc.on('error', handleNfcError);
-  } catch (error) {
-    nfc = null;
-    setLastError(new Error(`NFC initialization failed: ${error.message}`));
-  }
+  nfcInitializationStarted = true;
+
+  setImmediate(() => {
+    try {
+      nfc = new NFC();
+      nfc.on('reader', handleReader);
+      nfc.on('error', handleNfcError);
+      logAction('startup', 'NFC reader monitoring initialized.');
+    } catch (error) {
+      nfc = null;
+      setLastError(new Error(`NFC initialization failed: ${error.message}`));
+    }
+  });
 }
 
 function handleReader(reader) {
@@ -989,13 +996,9 @@ function startHelper() {
     helperStarted = false;
     server = null;
     setLastError(new Error(`HTTP server failed to start: ${error.message}`));
-    if (require.main === module) {
-      process.exit(1);
-    }
   });
 
   helperStarted = true;
-  initializeNfc();
   return getHelperStatus();
 }
 
@@ -1020,6 +1023,7 @@ function stopHelper() {
       nfc.close();
       nfc = null;
     }
+    nfcInitializationStarted = false;
 
     const currentServer = server;
     server = null;
